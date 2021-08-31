@@ -1,10 +1,7 @@
 package com.nr.agent.instrumentation.httpclient;
 
 import com.newrelic.agent.bridge.AgentBridge;
-import com.newrelic.api.agent.GenericParameters;
-import com.newrelic.api.agent.HttpParameters;
-import com.newrelic.api.agent.NewRelic;
-import com.newrelic.api.agent.Segment;
+import com.newrelic.api.agent.*;
 import com.newrelic.api.agent.weaver.Weaver;
 
 import java.net.ConnectException;
@@ -23,6 +20,19 @@ public class Util {
 
     public static void addOutboundHeaders(HttpRequest.Builder thisBuilder) {
         NewRelic.getAgent().getTracedMethod().addOutboundRequestHeaders(new OutboundWrapper(thisBuilder));
+    }
+
+    public static Segment startSegment(URI uri) {
+        if (uri != null) {
+            String scheme = uri.getScheme().toLowerCase();
+            Transaction txn = NewRelic.getAgent().getTransaction();
+
+            // only instrument HTTP or HTTPS calls
+            if (("http".equals(scheme) || "https".equals(scheme)) && txn != null) {
+                return txn.startSegment("javahttpclient.sendAsync");
+            }
+        }
+        return null;
     }
 
     public static <T> BiConsumer<? super HttpResponse<T>, ? super Throwable> reportAsExternal(URI uri, Segment segment) {
